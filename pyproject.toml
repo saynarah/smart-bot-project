@@ -1,0 +1,25 @@
+[project]
+name = "smart-qa-bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "saynarah.nabuco", email = "saynarah.nabuco@revelo.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "langchain>=1.4.8",
+    "langchain-anthropic>=1.7.8",
+    "langchain-core>=1.7.4",
+    "langchain-openai>=1.7.3",
+    "langgraph>=1.2.19",
+    "langsmith>=0.14.17",
+    "python-dotenv>=1.2.4",
+]
+
+[project.scripts]
+smart-qa-bot = "smart_qa_bot:main"
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
