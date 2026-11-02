@@ -1,0 +1,223 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Q&A Bot</title>
+
+  <style>
+    body {
+      background: #101827;
+      color: white;
+      font-family: Arial, sans-serif;
+      max-width: 650px;
+      margin: 60px auto;
+      padding: 20px;
+    }
+
+    #chat {
+      min-height: 300px;
+      max-height: 450px;
+      overflow-y: auto;
+      padding: 20px;
+      background: #1e293b;
+      border-radius: 12px;
+    }
+
+    .message {
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 10px;
+      white-space: pre-wrap;
+    }
+
+    .user {
+      background: #30466d;
+    }
+
+    .bot {
+      background: #334155;
+    }
+
+    form {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    button {
+      background: #4778db;
+      color: white;
+      border: 0;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .follow-up {
+      display: block;
+      margin: 8px 0;
+      text-align: left;
+      background: #30466d;
+    }
+  </style>
+</head>
+
+<body>
+  <h1> Your Fitness & Wellness Smart Q&A Bot</h1>
+  <p>Powered by LangChain</p>
+
+  <div id="chat"></div>
+
+  <form id="chat-form">
+    <input
+      id="question"
+      placeholder="Ask a question..."
+      required
+    >
+    <button type="submit">Send</button>
+  </form>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("question");
+    const button = form.querySelector("button");
+
+    function addMessage(text, role) {
+      const element = document.createElement("div");
+
+      element.className = `message ${role}`;
+      element.textContent = text;
+
+      chat.appendChild(element);
+      chat.scrollTop = chat.scrollHeight;
+
+      return element;
+    }
+
+    function addField(container, label, value) {
+      const paragraph = document.createElement("p");
+      const strong = document.createElement("strong");
+
+      strong.textContent = `${label}: `;
+      paragraph.appendChild(strong);
+      paragraph.appendChild(
+        document.createTextNode(String(value))
+      );
+
+      container.appendChild(paragraph);
+    }
+
+    async function sendQuestion(question) {
+      if (!question || button.disabled) return;
+
+      addMessage(question, "user");
+
+      input.value = "";
+      button.disabled = true;
+
+      const pending = addMessage("Thinking...", "bot");
+
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:8000/chat",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ question })
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Clear loading message
+        pending.textContent = "";
+
+        // Main answer
+        addField(pending, "Answer", data.answer);
+
+        // Confidence level
+        addField(
+          pending,
+          "Confidence",
+          data.confidence
+        );
+
+        // Reasoning
+        addField(
+          pending,
+          "Reasoning",
+          data.reasoning
+        );
+
+        // Follow-up questions
+        if (data.follow_up_questions?.length) {
+          const title = document.createElement("strong");
+
+          title.textContent = "Suggested questions:";
+          pending.appendChild(title);
+
+          for (const followUp of data.follow_up_questions) {
+            const followUpButton = document.createElement("button");
+
+            followUpButton.type = "button";
+            followUpButton.className = "follow-up";
+            followUpButton.textContent = followUp;
+
+            followUpButton.addEventListener("click", () => {
+              sendQuestion(followUp);
+            });
+
+            pending.appendChild(followUpButton);
+          }
+        }
+
+        // Sources needed
+        addField(
+          pending,
+          "Sources needed",
+          data.sources_needed ? "Yes" : "No"
+        );
+
+      } catch (error) {
+        console.error("Chat error:", error);
+
+        pending.textContent =
+          "Unable to get a response. Please try again.";
+
+      } finally {
+        button.disabled = false;
+        input.focus();
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const question = input.value.trim();
+      await sendQuestion(question);
+    });
+  </script>
+</body>
+</html>
